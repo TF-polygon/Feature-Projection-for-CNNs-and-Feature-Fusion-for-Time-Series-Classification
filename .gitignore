@@ -206,9 +206,15 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
 # Custom materials
 Reference/
 datasets/
 weights/
 train_data/
+temp/
+image/
+data/FTH/
+
+# Experimental materials
+test_model.ipynb
+data_labeling.ipynb

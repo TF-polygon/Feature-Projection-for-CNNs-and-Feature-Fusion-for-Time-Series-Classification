@@ -1,0 +1,1 @@
+# Feature Projection for CNNs and Feature Fusion for Time Series Classification
