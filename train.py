@@ -16,61 +16,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, precision_recall_curve
 
 from model import single_feature_model, double_features_model, multi_features_model, multi_features_mfct_net
-
-class MultiFeatureNPZdataset(Dataset):
-    def __init__(self, npz_path, transform=None):
-        self.transform = transform
-        data = np.load(npz_path)
-
-        self.gasf_data = data['gasf']
-        self.gadf_data = data['gadf']
-        self.rp_data = data['rp']
-        self.labels = data['labels']
-
-        self.num_samples = len(self.labels)
-
-        print(f"Loaded NPZ Dataset: {self.num_samples} samples.")
-
-    def __len__(self):
-        return self.num_samples
-    
-    def __getitem__(self, index):
-        img_gasf = transforms.ToPILImage()(self.gasf_data[index])
-        img_gadf = transforms.ToPILImage()(self.gadf_data[index])
-        img_rp = transforms.ToPILImage()(self.rp_data[index])
-        
-        label = self.labels[index]
-
-        if self.transform:
-            img_gasf = self.transform(img_gasf)
-            img_gadf = self.transform(img_gadf)
-            img_rp = self.transform(img_rp)
-
-        return img_gasf, img_gadf, img_rp, torch.tensor(label, dtype=torch.long)
-
-class DoubleFeatureNPZdataset(Dataset):
-    def __init__(self, npz_path, transform=None):
-        self.transform = transform
-        data = np.load(npz_path)
-        self.f1 = data['feature1']
-        self.f2 = data['feature2']
-        self.labels = data['labels']
-        self.num_samples = len(self.labels)
-        print(f"Loaded NPZ Dataset: {self.num_samples} samples.")
-
-    def __len__(self):
-        return self.num_samples
-    
-    def __getitem__(self, index):
-        img1 = transforms.ToPILImage()(self.f1[index])
-        img2 = transforms.ToPILImage()(self.f2[index])
-        label = self.labels[index]
-
-        if self.transform:
-            img1 = self.transform(img1)            
-            img2 = self.transform(img2)
-
-        return img1, img2, torch.tensor(label, dtype=torch.long)
+from dataset import MultiFeatureNPZdataset, DoubleFeatureNPZdataset
 
 def get_model(num_features, input_size):
     if num_features == 1:
@@ -80,7 +26,7 @@ def get_model(num_features, input_size):
     elif num_features == 3:
         return multi_features_model(input_size) # multi_features_mfct_net(input_size)
 
-def export(model, train_logs, valid_logs, test_results=None):
+def export(model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
     train_data_path = 'train_data'
     weight_path = 'weights'
     os.makedirs(train_data_path, exist_ok=True)
@@ -97,12 +43,25 @@ def export(model, train_logs, valid_logs, test_results=None):
         log_testdf = pd.DataFrame(test_results)
         log_testdf.to_csv(os.path.join(train_data_path, weight_name + "_test.csv"), index=False)
         print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv, {weight_name}_test.csv]")     
-        return 
+        
+        test_data_path = 'test_data'
+        os.makedirs(test_data_path, exist_ok=True)
+        npz_file_path = os.path.join(test_data_path, weight_name)
+
+        test_labels_np = np.array(test_labels)
+        test_preds_np = np.array(test_preds)
+
+        return np.savez_compressed(
+            npz_file_path,
+            labels=test_labels_np,
+            preds=test_preds_np,
+        )
     
     print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv]") 
 
-def dataloader(num_features, batch_size, path):
+def dataloader(num_features, input_size, batch_size, path):
     transform = transforms.Compose([
+        transforms.Resize((input_size, input_size)),
         transforms.ToTensor(),
         transforms.RandomErasing(),
     ])
@@ -415,11 +374,54 @@ def train_multifeatures(model, epochs, criterion, optimizer, train_loader, valid
     
     return train_logs, valid_logs
 
-def test_singlefeature(model, test_loader, criterion, device):
-    test_preds, test_labels, test_results = [], [], []
+def test_multifeatures(model, test_loader, criterion, device):
+    test_preds, test_labels = [], []
     test_loss = 0.0
     
-    print("***** Start testing the model")
+    with torch.no_grad():
+        for f1, f2, f3, labels in test_loader:
+            f1, f2, f3, labels = f1.to(device), f2.to(device), f3.to(device), labels.to(device)
+
+            outputs = model(f1, f2, f3)
+            loss = criterion(outputs, labels)
+            test_loss += loss.item()
+
+            preds = torch.argmax(outputs, dim=1)
+            test_preds.extend(preds.cpu().numpy())
+            test_labels.extend(labels.cpu().numpy())
+
+    test_acc = accuracy_score(test_labels, test_preds)
+    test_prec = precision_score(test_labels, test_preds, average='macro', zero_division=0)
+    test_rec = recall_score(test_labels, test_preds, average='macro', zero_division=0)
+
+    return test_labels, test_preds, test_loss, test_acc, test_prec, test_rec
+
+def test_doublefeatures(model, test_loader, criterion, device):
+    test_preds, test_labels = [], []
+    test_loss = 0.0
+    
+    with torch.no_grad():
+        for f1, f2, labels in test_loader:
+            f1, f2, labels = f1.to(device), f2.to(device), labels.to(device)
+
+            outputs = model(f1, f2)
+            loss = criterion(outputs, labels)
+            test_loss += loss.item()
+
+            preds = torch.argmax(outputs, dim=1)
+            test_preds.extend(preds.cpu().numpy())
+            test_labels.extend(labels.cpu().numpy())
+
+    test_acc = accuracy_score(test_labels, test_preds)
+    test_prec = precision_score(test_labels, test_preds, average='macro', zero_division=0)
+    test_rec = recall_score(test_labels, test_preds, average='macro', zero_division=0)
+
+    return test_labels, test_preds, test_loss, test_acc, test_prec, test_rec
+
+def test_singlefeature(model, test_loader, criterion, device):
+    test_preds, test_labels = [], []
+    test_loss = 0.0
+    
     test_progress_bar = tqdm(test_loader, desc=f"Testing the model", leave=True)
     with torch.no_grad():
         for images, labels in test_progress_bar:
@@ -436,83 +438,60 @@ def test_singlefeature(model, test_loader, criterion, device):
     test_acc = accuracy_score(test_labels, test_preds)
     test_prec = precision_score(test_labels, test_preds, average='macro', zero_division=0)
     test_rec = recall_score(test_labels, test_preds, average='macro', zero_division=0)
-    test_results.append({
-        "Test Accuracy": test_acc,
-        "Test Precision": test_prec,
-        "Test Recall": test_rec
-    })
-
-    print(f"\n🏁 Test Set Evaluation Result:")
-    print(f"Loss = {test_loss / len(test_loader):.4f}, Accuracy = {test_acc:.4f}, Precision = {test_prec:.4f}, Recall = {test_rec:.4f} ")
-
-    return test_labels, test_preds, test_results
-
-def test_doublefeatures(model, test_loader, criterion, device):
-    test_preds, test_labels, test_results = [], [], []
-    test_loss = 0.0
     
-    print("***** Start testing the model")
+    return test_labels, test_preds, test_loss, test_acc, test_prec, test_rec
+
+def test_model(model, num_features, test_loader, criterion, device):
+    test_results = []
+    print("Start to test the model")
     test_progress_bar = tqdm(test_loader, desc=f"Testing the model", leave=True)
-    with torch.no_grad():
-        for f1, f2, labels in test_progress_bar:
-            images, labels = images.to(device), labels.to(device)
-
-            outputs = model(f1, f2)
-            loss = criterion(outputs, labels)
-            test_loss += loss.item()
-
-            preds = torch.argmax(outputs, dim=1)
-            test_preds.extend(preds.cpu().numpy())
-            test_labels.extend(labels.cpu().numpy())
-
-    test_acc = accuracy_score(test_labels, test_preds)
-    test_prec = precision_score(test_labels, test_preds, average='macro', zero_division=0)
-    test_rec = recall_score(test_labels, test_preds, average='macro', zero_division=0)
-    test_results.append({
-        "Test Accuracy": test_acc,
-        "Test Precision": test_prec,
-        "Test Recall": test_rec
-    })
-
-    print(f"\n🏁 Test Set Evaluation Result:")
-    print(f"Loss = {test_loss / len(test_loader):.4f}, Accuracy = {test_acc:.4f}, Precision = {test_prec:.4f}, Recall = {test_rec:.4f} ")
-
-    return test_labels, test_preds, test_results
-
-
-def test_multifeatures(model, test_loader, criterion, device):
-    test_preds, test_labels, test_results = [], [], []
-    test_loss = 0.0
     
-    print("***** Start testing the model")
-    test_progress_bar = tqdm(test_loader, desc=f"Testing the model", leave=True)
-    with torch.no_grad():
-        for f1, f2, f3, labels in test_progress_bar:
-            f1, f2, f3, labels = f1.to(device), f2.to(device), f3.to(device), labels.to(device)
+    if num_features == 1:
+        test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_singlefeature(
+            model=model, 
+            test_loader=test_progress_bar, 
+            criterion=criterion, 
+            device=device
+        )
+        
+        test_results.append({
+            "Test Accuracy": test_acc,
+            "Test Precision": test_prec,
+            "Test Recall": test_rec
+        })
 
-            outputs = model(f1, f2, f3)
-            loss = criterion(outputs, labels)
-            test_loss += loss.item()
+    elif num_features == 2:
+        test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_doublefeatures(
+            model=model, 
+            test_loader=test_progress_bar, 
+            criterion=criterion, 
+            device=device
+        )
 
-            preds = torch.argmax(outputs, dim=1)
-            test_preds.extend(preds.cpu().numpy())
-            test_labels.extend(labels.cpu().numpy())
+        test_results.append({
+            "Test Accuracy": test_acc,
+            "Test Precision": test_prec,
+            "Test Recall": test_rec
+        })
 
-    test_acc = accuracy_score(test_labels, test_preds)
-    test_prec = precision_score(test_labels, test_preds, average='macro', zero_division=0)
-    test_rec = recall_score(test_labels, test_preds, average='macro', zero_division=0)
-    test_results.append({
-        "Test Accuracy": test_acc,
-        "Test Precision": test_prec,
-        "Test Recall": test_rec
-    })
+    else:
+        test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_multifeatures(
+            model=model, 
+            test_loader=test_progress_bar, 
+            criterion=criterion, 
+            device=device
+        )
 
+        test_results.append({
+            "Test Accuracy": test_acc,
+            "Test Precision": test_prec,
+            "Test Recall": test_rec
+        })
+    
     print(f"\n🏁 Test Set Evaluation Result:")
     print(f"Loss = {test_loss / len(test_loader):.4f}, Accuracy = {test_acc:.4f}, Precision = {test_prec:.4f}, Recall = {test_rec:.4f} ")
-
+    
     return test_labels, test_preds, test_results
-
-
 
 def main(args):
     model = get_model(args.num_features, args.input_size)
@@ -522,7 +501,7 @@ def main(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
     
-    train_loader, valid_loader, test_loader = dataloader(args.num_features, args.batch_size, args.dataset)
+    train_loader, valid_loader, test_loader = dataloader(args.num_features, args.input_size, args.batch_size, args.dataset)
 
     if args.num_features == 1:
         train_logs, valid_logs = train_singlefeature(
@@ -532,21 +511,6 @@ def main(args):
             optimizer=optimizer,
             train_loader=train_loader,
             valid_loader=valid_loader,
-        )
-
-        model.eval()
-        test_labels, test_preds, test_results = test_singlefeature(
-            model=model,
-            test_loader=test_loader,
-            criterion=criterion,
-            device=device
-        )
-        
-        export(
-            model=model,
-            train_logs=train_logs,
-            valid_logs=valid_logs,
-            test_results=test_results
         )
 
     elif args.num_features == 2:
@@ -559,20 +523,6 @@ def main(args):
             valid_loader=valid_loader,
         )    
         
-        # model.eval()
-        # test_labels, test_preds, test_results = test_doublefeature(
-        #     model=model,
-        #     test_loader=test_loader,
-        #     criterion=criterion,
-        #     device=device
-        # )
-
-        export(
-            model=model,
-            train_logs=train_logs,
-            valid_logs=valid_logs
-        )
-
     elif args.num_features == 3:
         train_logs, valid_logs = train_multifeatures(
             model=model,
@@ -582,21 +532,23 @@ def main(args):
             train_loader=train_loader,
             valid_loader=valid_loader,
         )    
-        
-        # model.eval()
-        # test_labels, test_preds, test_results = test_doublefeature(
-        #     model=model,
-        #     test_loader=test_loader,
-        #     criterion=criterion,
-        #     device=device
-        # )
 
-        export(
-            model=model,
-            train_logs=train_logs,
-            valid_logs=valid_logs
-        )
-    
+    test_labels, test_preds, test_results = test_model(
+        model=model,
+        num_features=args.num_features,
+        test_loader=test_loader,
+        criterion=criterion,
+        device=device
+    )
+
+    export(
+        model=model,
+        train_logs=train_logs,
+        valid_logs=valid_logs,
+        test_results=test_results,
+        test_labels=test_labels,
+        test_preds=test_preds,
+    )    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -606,6 +558,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_features', type=int, required=True, default=3, help='Number of features to input')
     parser.add_argument('--epochs', type=int, required=True, default=10)
     parser.add_argument('--batch_size', type=int, required=True, default=32)
+    parser.add_argument('--test', type=bool, default=False)
     
     args = parser.parse_args()
 

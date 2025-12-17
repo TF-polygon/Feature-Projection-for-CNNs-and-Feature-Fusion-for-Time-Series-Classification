@@ -19,8 +19,8 @@ class Conv(nn.Module):
                 nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Dropout2d(0.4)
+                # nn.MaxPool2d(kernel_size=2, stride=1),
+                nn.Dropout2d(0.3)
             )
         
         self.conv_features = nn.Sequential(
@@ -30,8 +30,8 @@ class Conv(nn.Module):
             nn.Conv2d(128, out_channels, kernel_size=1)
         )
         
-        self.output_H = input_size // (2 * 2 * 2)
-        self.output_W = input_size // (2 * 2 * 2)
+        self.output_H = input_size
+        self.output_W = input_size
     
     def forward(self, x):
         x = self.conv_features(x)
@@ -70,7 +70,7 @@ class MultiFeatureFusion(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(final_vec_size, hidden_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.Linear(hidden_dim, num_classes)
         )
         
