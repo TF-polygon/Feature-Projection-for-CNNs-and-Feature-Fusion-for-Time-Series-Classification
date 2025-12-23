@@ -1,22 +1,19 @@
-import os
-import numpy as np
-import glob
+from muffin.model import single_feature_model, double_features_model, multi_features_model
+from muffin.utils import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
+
 from datetime import datetime
-
-import sys
-import torch
-import argparse
-import pandas as pd
-from tqdm import tqdm
-from PIL import Image
-from torch import nn, optim
 from torchvision import datasets, transforms
-
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, precision_recall_curve
 
-from model import single_feature_model, double_features_model, multi_features_model, multi_features_mfct_net
-from dataset import MultiFeatureNPZdataset, DoubleFeatureNPZdataset
+from glob import glob
+from torch import nn, optim
+from tqdm import tqdm
+
+import pandas as pd
+import numpy as np
+import torch
+import os
 
 def get_model(num_features, input_size):
     if num_features == 1:
@@ -25,9 +22,9 @@ def get_model(num_features, input_size):
         return double_features_model(input_size)
     elif num_features == 3:
         return multi_features_model(input_size) # multi_features_mfct_net(input_size)
-
+    
 def export(model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
-    train_data_path = 'train_data'
+    train_data_path = 'data/results'
     weight_path = 'weights'
     os.makedirs(train_data_path, exist_ok=True)
     os.makedirs(weight_path, exist_ok=True)
@@ -44,7 +41,7 @@ def export(model, train_logs, valid_logs, test_results=None, test_labels=None, t
         log_testdf.to_csv(os.path.join(train_data_path, weight_name + "_test.csv"), index=False)
         print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv, {weight_name}_test.csv]")     
         
-        test_data_path = 'test_data'
+        test_data_path = 'data/results/test_data'
         os.makedirs(test_data_path, exist_ok=True)
         npz_file_path = os.path.join(test_data_path, weight_name)
 
@@ -374,6 +371,7 @@ def train_multifeatures(model, epochs, criterion, optimizer, train_loader, valid
     
     return train_logs, valid_logs
 
+
 def test_multifeatures(model, test_loader, criterion, device):
     test_preds, test_labels = [], []
     test_loss = 0.0
@@ -492,74 +490,3 @@ def test_model(model, num_features, test_loader, criterion, device):
     print(f"Loss = {test_loss / len(test_loader):.4f}, Accuracy = {test_acc:.4f}, Precision = {test_prec:.4f}, Recall = {test_rec:.4f} ")
     
     return test_labels, test_preds, test_results
-
-def main(args):
-    model = get_model(args.num_features, args.input_size)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
-    
-    train_loader, valid_loader, test_loader = dataloader(args.num_features, args.input_size, args.batch_size, args.dataset)
-
-    if args.num_features == 1:
-        train_logs, valid_logs = train_singlefeature(
-            model=model,
-            epochs=args.epochs,
-            criterion=criterion,
-            optimizer=optimizer,
-            train_loader=train_loader,
-            valid_loader=valid_loader,
-        )
-
-    elif args.num_features == 2:
-        train_logs, valid_logs = train_doublefeatures(
-            model=model,
-            epochs=args.epochs,
-            criterion=criterion,
-            optimizer=optimizer,
-            train_loader=train_loader,
-            valid_loader=valid_loader,
-        )    
-        
-    elif args.num_features == 3:
-        train_logs, valid_logs = train_multifeatures(
-            model=model,
-            epochs=args.epochs,
-            criterion=criterion,
-            optimizer=optimizer,
-            train_loader=train_loader,
-            valid_loader=valid_loader,
-        )    
-
-    test_labels, test_preds, test_results = test_model(
-        model=model,
-        num_features=args.num_features,
-        test_loader=test_loader,
-        criterion=criterion,
-        device=device
-    )
-
-    export(
-        model=model,
-        train_logs=train_logs,
-        valid_logs=valid_logs,
-        test_results=test_results,
-        test_labels=test_labels,
-        test_preds=test_preds,
-    )    
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--dataset', type=str, required=True, help='path to dataset')
-    parser.add_argument('--input_size', type=int, required=True, help='input size of model')
-    parser.add_argument('--num_features', type=int, required=True, default=3, help='Number of features to input')
-    parser.add_argument('--epochs', type=int, required=True, default=10)
-    parser.add_argument('--batch_size', type=int, required=True, default=32)
-    parser.add_argument('--test', type=bool, default=False)
-    
-    args = parser.parse_args()
-
-    main(args)

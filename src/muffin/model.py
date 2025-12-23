@@ -1,14 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import sys
-import os
-
-from glob import glob
-from torch.utils.data import Dataset
-from torchvision import transforms
-from PIL import Image
 
 class Conv(nn.Module):
     def __init__(self, out_channels, init_channels=3, input_size=6):
@@ -165,26 +157,3 @@ def multi_features_model(input_size):
 
 def multi_features_mfct_net(input_size):
     return MFCT_Net(input_size=input_size, num_classes=3)
-
-if __name__ == '__main__':
-    input_size = 24 
-
-    img1 = torch.randn(6, 3, input_size, input_size)
-    img2 = torch.randn(6, 3, input_size, input_size)
-    img3 = torch.randn(6, 3, input_size, input_size)
-
-    single_model = single_feature_model(input_size)
-    double_model = double_features_model(input_size)
-    _multi_model = multi_features_model(input_size)
-
-    logits = single_model(img1)
-    print(logits.shape)
-    print(count_parameters(single_model))
-
-    logits = double_model(img1, img2)
-    print(logits.shape)
-    print(count_parameters(double_model))
-
-    logits = _multi_model(img1, img2, img3)
-    print(logits.shape)
-    print(count_parameters(_multi_model))
