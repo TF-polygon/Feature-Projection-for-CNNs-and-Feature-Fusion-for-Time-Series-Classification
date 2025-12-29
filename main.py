@@ -1,4 +1,4 @@
-from src.muffin import *
+from src.muffin.train import *
 
 from datetime import datetime
 from torchvision import datasets, transforms

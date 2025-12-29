@@ -65,6 +65,8 @@ class MultiFeatureFusion(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(hidden_dim, num_classes)
         )
+
+        self.fc = nn.Linear(final_vec_size, num_classes)
         
     def forward(self, f_1, f_2=None, f_3=None):
         f_list = []
@@ -90,10 +92,10 @@ class MultiFeatureFusion(nn.Module):
         x = self.fusion_block(x)
         x = x.flatten(start_dim=1)
         
-        return self.classifier(x)
+        return self.fc(x)
 
 class MFCT_Net(nn.Module):
-    def __init__(self, input_size, input_dim=48, embed_dim=384, hidden_dim=512, num_heads=8, num_layers=3, num_classes=2):
+    def __init__(self, input_size, embed_dim=384, hidden_dim=512, num_heads=8, num_layers=3, num_classes=2):
         super(MFCT_Net, self).__init__()
 
         self.embed_dim = embed_dim

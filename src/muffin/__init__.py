@@ -3,4 +3,3 @@ from muffin.model import single_feature_model, double_features_model, multi_feat
 from muffin.train import get_model, export, dataloader, train_singlefeature, train_doublefeatures, train_multifeatures, test_model
 
 __version__ = '0.1.0'
-
