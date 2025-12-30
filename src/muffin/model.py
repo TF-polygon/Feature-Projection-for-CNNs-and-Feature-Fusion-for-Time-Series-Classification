@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
+import sys
 
 class Conv(nn.Module):
-    def __init__(self, out_channels, init_channels=3, input_size=6):
+    def __init__(self, out_channels, init_channels=3, input_size=48):
         super(Conv, self).__init__()
 
         def conv_block(in_channels, out_channels):
@@ -11,7 +12,7 @@ class Conv(nn.Module):
                 nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
-                # nn.MaxPool2d(kernel_size=2, stride=1),
+                nn.MaxPool2d(kernel_size=2, stride=2),
                 nn.Dropout2d(0.3)
             )
         
@@ -22,8 +23,8 @@ class Conv(nn.Module):
             nn.Conv2d(128, out_channels, kernel_size=1)
         )
         
-        self.output_H = input_size
-        self.output_W = input_size
+        self.output_H = input_size // (2 * 2 * 2)
+        self.output_W = input_size // (2 * 2 * 2)
     
     def forward(self, x):
         x = self.conv_features(x)
@@ -52,6 +53,7 @@ class MultiFeatureFusion(nn.Module):
         self.f_w = self.cnn_f1.output_W
     
         total_in_channels = dim_per_cnn * num_features
+
         self.fusion_block = nn.Sequential(
             nn.Conv2d(total_in_channels, hidden_dim, kernel_size=1),
             nn.ReLU(),
@@ -65,6 +67,19 @@ class MultiFeatureFusion(nn.Module):
             nn.Dropout(0.3),
             nn.Linear(hidden_dim, num_classes)
         )
+        
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(final_vec_size, 512), # 첫 번째: 고차원 특징 통합
+        #     nn.BatchNorm1d(512),            # 금융 데이터는 배치 정규화가 매우 효과적
+        #     nn.ReLU(),
+        #     nn.Dropout(0.4),                # 과적합 방지
+            
+        #     nn.Linear(512, 128),            # 두 번째: 핵심 특징 압축
+        #     nn.ReLU(),
+        #     nn.Dropout(0.2),
+            
+        #     nn.Linear(128, num_classes)     # 세 번째: 최종 분류
+        # )
 
         self.fc = nn.Linear(final_vec_size, num_classes)
         
@@ -92,7 +107,7 @@ class MultiFeatureFusion(nn.Module):
         x = self.fusion_block(x)
         x = x.flatten(start_dim=1)
         
-        return self.fc(x)
+        return self.classifier(x)
 
 class MFCT_Net(nn.Module):
     def __init__(self, input_size, embed_dim=384, hidden_dim=512, num_heads=8, num_layers=3, num_classes=2):
@@ -159,3 +174,32 @@ def multi_features_model(input_size):
 
 def multi_features_mfct_net(input_size):
     return MFCT_Net(input_size=input_size, num_classes=3)
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print('Usage >> python model.py <input_size>')
+    else:
+        input_size = int(sys.argv[1])
+
+        img1 = torch.randn(6, 3, input_size, input_size)
+        img2 = torch.randn(6, 3, input_size, input_size)
+        img3 = torch.randn(6, 3, input_size, input_size)
+
+        model1 = single_feature_model(input_size=input_size)
+        model2 = double_features_model(input_size=input_size)
+        model3 = multi_features_model(input_size=input_size)
+
+        logits = model1(img1)
+
+        print(logits.shape)
+        print(count_parameters(model1))
+
+        logits = model2(img1, img2)
+
+        print(logits.shape)
+        print(count_parameters(model2))
+        
+        logits = model3(img1, img2, img3)
+
+        print(logits.shape)
+        print(count_parameters(model3))

@@ -3,10 +3,9 @@ from muffin.utils import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
 
 from datetime import datetime
 from torchvision import datasets, transforms
-from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split
+from torch.utils.data import DataLoader, random_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, precision_recall_curve
 
-from glob import glob
 from torch import nn, optim
 from tqdm import tqdm
 
@@ -79,6 +78,7 @@ def dataloader(num_features, input_size, batch_size, path):
     train_dataset, val_dataset, test_dataset = random_split(
         dataset, [train_size, val_size, test_size], generator=generator
     )
+
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
@@ -490,3 +490,63 @@ def test_model(model, num_features, test_loader, criterion, device):
     print(f"Loss = {test_loss / len(test_loader):.4f}, Accuracy = {test_acc:.4f}, Precision = {test_prec:.4f}, Recall = {test_rec:.4f} ")
     
     return test_labels, test_preds, test_results
+
+def run(args):
+    model = get_model(args.num_features, args.input_size)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    
+    train_loader, valid_loader, test_loader = dataloader(args.num_features, args.input_size, args.batch_size, args.dataset)
+
+    if args.num_features == 1:
+        train_logs, valid_logs = train_singlefeature(
+            model=model,
+            epochs=args.epochs,
+            criterion=criterion,
+            optimizer=optimizer,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+        )
+
+    elif args.num_features == 2:
+        train_logs, valid_logs = train_doublefeatures(
+            model=model,
+            epochs=args.epochs,
+            criterion=criterion,
+            optimizer=optimizer,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+        )    
+    
+    elif args.num_features == 3:
+        train_logs, valid_logs = train_multifeatures(
+            model=model,
+            epochs=args.epochs,
+            criterion=criterion,
+            optimizer=optimizer,
+            train_loader=train_loader,
+            valid_loader=valid_loader,
+        )    
+    
+    test_labels, test_preds, test_results = test_model(
+        model=model,
+        num_features=args.num_features,
+        test_loader=test_loader,
+        criterion=criterion,
+        device=device
+    )
+
+    export(
+        model=model,
+        train_logs=train_logs,
+        valid_logs=valid_logs,
+        test_results=test_results,
+        test_labels=test_labels,
+        test_preds=test_preds,
+    )    
+
+if __name__ == '__main__':
+    dir()

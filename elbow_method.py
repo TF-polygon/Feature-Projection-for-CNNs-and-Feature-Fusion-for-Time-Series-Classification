@@ -73,7 +73,7 @@ def main(path, window_size):
         dbi_arr.append(dbi)
         iter_end_time = time.time()
 
-        print(f'K [{k}/16],   cost : {inertia},   SC : {sc},   CHI : {chi},   DBI : {dbi},   Time : {(end_time - start_time) / 60.0:3f}m')
+        print(f'K [{k}/16],   cost : {inertia},   SC : {sc},   CHI : {chi},   DBI : {dbi},   Time : {(iter_end_time - iter_start_time) / 60.0:3f}m')
 
     end_time = time.time()
 
