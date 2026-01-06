@@ -209,6 +209,7 @@ __marimo__/
 # Custom materials
 data/results
 datasets/FTH
+notebooks/
 docs/
 image/
 prev/
@@ -216,5 +217,3 @@ temp/
 weights/
 *.npz
 # Experimental materials
-test_model.ipynb
-data_labeling.ipynb

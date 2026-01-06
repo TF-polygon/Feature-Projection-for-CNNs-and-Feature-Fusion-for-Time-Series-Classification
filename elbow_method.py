@@ -1,7 +1,6 @@
 from tsmoothie.smoother import *
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMinMax
-from sklearn.cluster import KMeans
 from tqdm import tqdm
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 
@@ -62,7 +61,6 @@ def main(path, window_size):
         inertia = kmeans.inertia_
         labels = kmeans.labels_
 
-
         sc = silhouette_score(raw_scaled.reshape(raw_scaled.shape[0], -1), labels, metric='euclidean')
         chi = calinski_harabasz_score(raw_scaled.reshape(raw_scaled.shape[0], -1), labels)
         dbi = davies_bouldin_score(raw_scaled.reshape(raw_scaled.shape[0], -1), labels)
@@ -91,7 +89,7 @@ def main(path, window_size):
     print('Calinski Harabasz Index')
     print(chi_arr)
 
-    print('Davies Bouldin Score')
+    print('Davies Bouldin Index')
     print(dbi_arr)
 
     print(f'Time Taken: {(end_time - start_time) / 60.0:3f}m')

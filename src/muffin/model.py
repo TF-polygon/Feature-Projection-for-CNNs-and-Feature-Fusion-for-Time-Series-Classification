@@ -58,30 +58,28 @@ class MultiFeatureFusion(nn.Module):
             nn.Conv2d(total_in_channels, hidden_dim, kernel_size=1),
             nn.ReLU(),
         )
-
-        final_vec_size = hidden_dim * self.f_h * self.f_w
-
-        self.classifier = nn.Sequential(
-            nn.Linear(final_vec_size, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(hidden_dim, num_classes)
-        )
         
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(final_vec_size, 512), # 첫 번째: 고차원 특징 통합
-        #     nn.BatchNorm1d(512),            # 금융 데이터는 배치 정규화가 매우 효과적
-        #     nn.ReLU(),
-        #     nn.Dropout(0.4),                # 과적합 방지
-            
-        #     nn.Linear(512, 128),            # 두 번째: 핵심 특징 압축
-        #     nn.ReLU(),
-        #     nn.Dropout(0.2),
-            
-        #     nn.Linear(128, num_classes)     # 세 번째: 최종 분류
-        # )
+        self.agap = nn.AdaptiveAvgPool2d(1)
 
-        self.fc = nn.Linear(final_vec_size, num_classes)
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(final_vec_size, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.3),
+        #     nn.Linear(hidden_dim, num_classes)
+        # )
+        
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_dim, 512), 
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            
+            nn.Linear(128, num_classes)
+        )
         
     def forward(self, f_1, f_2=None, f_3=None):
         f_list = []
@@ -105,8 +103,10 @@ class MultiFeatureFusion(nn.Module):
 
         x = torch.cat(f_list, dim=1)
         x = self.fusion_block(x)
-        x = x.flatten(start_dim=1)
-        
+        # x = x.flatten(start_dim=1)
+        x = self.agap(x)
+        x = x.view(x.size(0), -1) 
+
         return self.classifier(x)
 
 class MFCT_Net(nn.Module):
@@ -136,12 +136,6 @@ class MFCT_Net(nn.Module):
 
         self.fc_head = nn.Linear(embed_dim, num_classes)
 
-        self.fc = nn.Sequential(
-            nn.Linear(embed_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.3)
-        )
-
     def forward(self, gasf, gadf, rp):
         f_gasf = self.cnn_gasf(gasf)
         f_gadf = self.cnn_gadf(gadf)
@@ -157,7 +151,6 @@ class MFCT_Net(nn.Module):
 
         x = x.mean(dim=1)
         x = self.fc_head(x)
-        # x = self.fc(x)a
         return x
 
 def count_parameters(model):
