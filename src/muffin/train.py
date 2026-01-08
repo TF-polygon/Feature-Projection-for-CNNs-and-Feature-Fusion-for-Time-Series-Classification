@@ -1,5 +1,5 @@
 from muffin.model import single_feature_model, double_features_model, multi_features_model
-from muffin.utils import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
+from muffin.dataset import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
 
 from datetime import datetime
 from torchvision import datasets, transforms
@@ -530,7 +530,7 @@ def run(args):
             train_loader=train_loader,
             valid_loader=valid_loader,
         )    
-    
+
     test_labels, test_preds, test_results = test_model(
         model=model,
         num_features=args.num_features,

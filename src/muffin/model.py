@@ -13,7 +13,7 @@ class Conv(nn.Module):
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Dropout2d(0.3)
+                nn.Dropout2d(0.4)
             )
         
         self.conv_features = nn.Sequential(
@@ -72,11 +72,11 @@ class MultiFeatureFusion(nn.Module):
             nn.Linear(hidden_dim, 512), 
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Dropout(0.4),
+            nn.Dropout(0.5),
             
             nn.Linear(512, 128),
             nn.ReLU(),
-            nn.Dropout(0.2),
+            nn.Dropout(0.3),
             
             nn.Linear(128, num_classes)
         )
