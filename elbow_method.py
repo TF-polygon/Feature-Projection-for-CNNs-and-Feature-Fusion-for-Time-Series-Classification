@@ -3,10 +3,10 @@ from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMinMax
 from rich.console import Console
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
-import datetime
 import argparse
 import time
 import sys
