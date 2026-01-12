@@ -1,22 +1,17 @@
-import torch
-import os
 import numpy as np
 
-from glob import glob
-from torch.utils.data import Dataset
-from torchvision import transforms
 from PIL import Image
 
 from tqdm import tqdm
 from muffin.dataset import DoubleFeatureFusionDataset, MultiFeatureFusionDataset
     
-def serialize_doublefeature(root_dir, output_npz_path, input_feature1, input_feature2):
+def serialize_doublefeature(root_dir, output_npz_path, input_feature1, input_feature2, class_to_idx):
     print(f"Search the dataset path: {root_dir}")
-    class_to_idx = {
-        'Downward': 0,
-        'Sideway': 1,
-        'Upward': 2
-    }
+    # class_to_idx = {
+    #     'Downward': 0,
+    #     'Sideway': 1,
+    #     'Upward': 2
+    # }
     dataset_temp = DoubleFeatureFusionDataset(root_dir, input_feature1, input_feature2, class_to_idx)
     data_list = dataset_temp.data_list
 
@@ -54,13 +49,13 @@ def serialize_doublefeature(root_dir, output_npz_path, input_feature1, input_fea
     
     print(f"Complete to serialize. Path to save the file: {output_npz_path}")    
 
-def serialize_multifeature(root_dir, output_npz_path):
+def serialize_multifeature(root_dir, output_npz_path, class_to_idx):
     print(f"Search the dataset path: {root_dir}")
-    class_to_idx = {
-        'Downward': 0,
-        'Sideway': 1,
-        'Upward': 2
-    }
+    # class_to_idx = {
+    #     'Downward': 0,
+    #     'Sideway': 1,
+    #     'Upward': 2
+    # }
     dataset_temp = MultiFeatureFusionDataset(root_dir, class_to_idx)
     data_list = dataset_temp.data_list
     
@@ -111,3 +106,6 @@ def main(args):
     else:
         print('Start to serialize for multi features')
         serialize_multifeature(args.dataset, args.path)
+
+if __name__ == '__main__':
+    pass
