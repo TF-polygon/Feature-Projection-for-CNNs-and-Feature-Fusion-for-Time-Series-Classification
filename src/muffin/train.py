@@ -4,7 +4,7 @@ from muffin.dataset import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
 from datetime import datetime
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, precision_recall_curve
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 from torch import nn, optim
 from tqdm import tqdm
@@ -23,7 +23,7 @@ def get_model(num_features, input_size):
         return multi_features_model(input_size) # multi_features_mfct_net(input_size)
     
 def export(model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
-    train_data_path = 'data/results'
+    train_data_path = 'data/results/train_data'
     weight_path = 'weights'
     os.makedirs(train_data_path, exist_ok=True)
     os.makedirs(weight_path, exist_ok=True)
