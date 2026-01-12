@@ -9,14 +9,13 @@ import pandas as pd
 import numpy as np
 import argparse
 import time
-import sys
 import os
 
 console = Console()
 
-def export(k_range, inertia_arr, sc_arr, chi_arr, dbi_arr):
+def export(window_shape, k_range, inertia_arr, sc_arr, chi_arr, dbi_arr):
     save_path = 'experimental_data'
-    file_name = f'elbow_method_results_{datetime.now().strftime("%m-%d_%H-%M")}.csv'
+    file_name = f'{window_shape}_elbow_method_results_{datetime.now().strftime("%m-%d_%H-%M")}.csv'
     os.makedirs(save_path, exist_ok=True)
     
     results_df = pd.DataFrame({
@@ -31,7 +30,7 @@ def export(k_range, inertia_arr, sc_arr, chi_arr, dbi_arr):
 
     print(f"Successfully save elbow method results! filename: {file_name}")
 
-def elbow_method(args):
+def run(args):
     data = pd.read_csv(args.path)
     window_shape = args.window_shape
     stride = args.stride
@@ -104,6 +103,7 @@ def elbow_method(args):
     print(f'Time Taken: {(end_time - start_time) / 60.0:3f}m')
 
     export(
+        window_shape=window_shape,
         k_range=k_range,
         inertia_arr=inertia_arr,
         sc_arr=sc_arr,
@@ -115,9 +115,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--path', type=str, required=True, help='path to dataset')
-    parser.add_argument('--window_shape', type=int, required=True, help='Window shape to clustering')
-    parser.add_argument('--stride', type=int, required=True, help='Stride')
+    parser.add_argument('--window_shape', type=int, required=True, help='window shape to clustering')
+    parser.add_argument('--stride', type=int, required=True, help='stride')
 
     args = parser.parse_args()
 
-    elbow_method(args)
+    run(args)
