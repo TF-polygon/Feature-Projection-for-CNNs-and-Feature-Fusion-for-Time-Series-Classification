@@ -1,5 +1,5 @@
 from muffin.model import single_feature_model, double_features_model, multi_features_model
-from muffin.dataset import DoubleFeatureNPZdataset, MultiFeatureNPZdataset
+from muffin.dataset import MultiFeatureFusionDataset, DoubleFeatureFusionDataset, DoubleFeatureNPZdataset, MultiFeatureNPZdataset
 
 from datetime import datetime
 from torchvision import datasets, transforms
@@ -55,19 +55,37 @@ def export(model, train_logs, valid_logs, test_results=None, test_labels=None, t
     
     print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv]") 
 
-def dataloader(num_features, input_size, batch_size, path):
+def dataloader(num_features, input_size, batch_size, path, num_classes=2):
     transform = transforms.Compose([
         transforms.Resize((input_size, input_size)),
         transforms.ToTensor(),
         transforms.RandomErasing(),
     ])
     
+    if num_classes == 2:
+        class_to_idx = {'class0': 0, 'class1': 1}
+    elif num_classes == 3:
+        class_to_idx = {'class0': 0, 'class1': 1, 'class2': 2}
+    elif num_classes == 4:
+        class_to_idx = {'class0': 0, 'class1': 1, 'class2': 2, 'class3': 3}
+
     if num_features == 1:
         dataset = datasets.ImageFolder(root=path, transform=transform)
     elif num_features == 2:
-        dataset = DoubleFeatureNPZdataset(path, transform)
+        dataset = DoubleFeatureFusionDataset(
+            root_dir=path, 
+            class_to_idx=class_to_idx,
+            f1='gasf',
+            f2='gadf', 
+            transform=transform
+        ) # DoubleFeatureNPZdataset(path, transform)
     else:
-        dataset = MultiFeatureNPZdataset(path, transform)
+        class_to_idx = {'class0': 0, 'class1': 1}
+        dataset = MultiFeatureFusionDataset(
+            root_dir=path,
+            class_to_idx=class_to_idx,
+            transform=transform
+        ) # MultiFeatureNPZdataset(path, transform)
 
     total_size = len(dataset)
     train_size = int(total_size * 0.7)
