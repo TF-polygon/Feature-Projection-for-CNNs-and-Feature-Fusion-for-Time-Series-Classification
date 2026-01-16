@@ -51,10 +51,10 @@ def visualize_elbow_method(p_e24, p_e48, p_e72, p_e96, p_g24, p_g48, p_g72, p_g9
         plt.subplot(2, 2, i + 1)
         plt.title(pairs[i], fontsize=18)
         for j in range(4):
-            plt.plot(data_list[(i * 4) + j], label=f'$W={24 * (j + 1)}')
+            plt.plot(data_list[(i * 4) + j], label=f'$W$={24 * (j + 1)}')
         
         plt.xlabel('$k$', fontsize=15)
-        if (i + 1) % 2 == 0:
+        if i % 2 == 0:
             if metric == 'inertia':
                 plt.ylabel('Inertia', fontsize=15)
             elif metric == 'sc':
@@ -66,10 +66,11 @@ def visualize_elbow_method(p_e24, p_e48, p_e72, p_e96, p_g24, p_g48, p_g72, p_g9
 
         plt.xticks(xaxis, xticks, fontsize=15)
         plt.yticks(fontsize=15)
+        plt.subplots_adjust(hspace=0.3)
         plt.legend(loc='best', fontsize=15)
         plt.grid()
     
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 def visualize_distribution_of_cluster(npz):
@@ -119,14 +120,15 @@ def visualize_confusion_matrix(labels_path, preds_path):
     plt.ylabel('True Label', fontsize=15)
 
 
-def visualize_learning_curve(data_path):
-    df = pd.read_csv(data_path)
+def visualize_learning_curve(train_path, valid_path):
+    train = pd.read_csv(train_path)
+    valid = pd.read_csv(valid_path)
     
-    train_acc = df['Train Accuracy']
-    train_loss = df['Train Loss']
+    train_acc = train['Train Accuracy']
+    train_loss = train['Train Loss']
 
-    valid_acc = df['Valid Accuracy']
-    valid_loss = df['Valid Loss']
+    valid_acc = valid['Val Accuracy']
+    valid_loss = valid['Val Loss']
 
     plt.figure(figsize=(12, 4))
 
