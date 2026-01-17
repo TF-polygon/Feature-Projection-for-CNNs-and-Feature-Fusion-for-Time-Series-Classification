@@ -1,5 +1,5 @@
-from muffin.model import single_feature_model, double_features_model, multi_features_model
-from muffin.dataset import MultiFeatureFusionDataset, DoubleFeatureFusionDataset, DoubleFeatureNPZdataset, MultiFeatureNPZdataset
+from muffin.model import single_feature_model, dual_features_model, multi_features_model
+from muffin.dataset import MultiFeatureFusionDataset, DualFeatureFusionDataset, MultiFeatureNPZdataset, DualFeatureNPZdataset
 
 from datetime import datetime
 from torchvision import datasets, transforms
@@ -14,16 +14,16 @@ import numpy as np
 import torch
 import os
 
-def get_model(num_features, input_size):
+def get_model(num_features, num_classes, input_size):
     if num_features == 1:
-        return single_feature_model(input_size)
+        return single_feature_model(input_size, num_classes)
     elif num_features == 2:
-        return double_features_model(input_size)
+        return dual_features_model(input_size, num_classes)
     elif num_features == 3:
-        return multi_features_model(input_size) # multi_features_mfct_net(input_size)
+        return multi_features_model(input_size, num_classes) # multi_features_mfct_net(input_size)
     
 def export(model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
-    train_data_path = 'data/results/train_data'
+    train_data_path = 'data/results/final_data'
     weight_path = 'weights'
     os.makedirs(train_data_path, exist_ok=True)
     os.makedirs(weight_path, exist_ok=True)
@@ -72,15 +72,14 @@ def dataloader(num_features, input_size, batch_size, path, num_classes=2):
     if num_features == 1:
         dataset = datasets.ImageFolder(root=path, transform=transform)
     elif num_features == 2:
-        dataset = DoubleFeatureFusionDataset(
+        dataset = DualFeatureFusionDataset(
             root_dir=path, 
             class_to_idx=class_to_idx,
             f1='gasf',
             f2='gadf', 
             transform=transform
-        ) # DoubleFeatureNPZdataset(path, transform)
+        ) # DualFeatureNPZdataset(path, transform)
     else:
-        class_to_idx = {'class0': 0, 'class1': 1}
         dataset = MultiFeatureFusionDataset(
             root_dir=path,
             class_to_idx=class_to_idx,
@@ -195,7 +194,7 @@ def train_singlefeature(model, epochs, criterion, optimizer, train_loader, valid
     
     return train_logs, valid_logs
 
-def train_doublefeatures(model, epochs, criterion, optimizer, train_loader, valid_loader, device=torch.device("cuda")):
+def train_dualfeatures(model, epochs, criterion, optimizer, train_loader, valid_loader, device=torch.device("cuda")):
     train_logs, valid_logs = [], []
     for epoch in range(epochs):
         model.train()
@@ -412,7 +411,7 @@ def test_multifeatures(model, test_loader, criterion, device):
 
     return test_labels, test_preds, test_loss, test_acc, test_prec, test_rec
 
-def test_doublefeatures(model, test_loader, criterion, device):
+def test_dualfeatures(model, test_loader, criterion, device):
     test_preds, test_labels = [], []
     test_loss = 0.0
     
@@ -477,7 +476,7 @@ def test_model(model, num_features, test_loader, criterion, device):
         })
 
     elif num_features == 2:
-        test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_doublefeatures(
+        test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_dualfeatures(
             model=model, 
             test_loader=test_progress_bar, 
             criterion=criterion, 
@@ -510,14 +509,20 @@ def test_model(model, num_features, test_loader, criterion, device):
     return test_labels, test_preds, test_results
 
 def run(args):
-    model = get_model(args.num_features, args.input_size)
+    model = get_model(args.num_features, args.num_classes, args.input_size)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
     
-    train_loader, valid_loader, test_loader = dataloader(args.num_features, args.input_size, args.batch_size, args.dataset)
+    train_loader, valid_loader, test_loader = dataloader(
+        path=args.dataset,
+        num_features=args.num_features, 
+        input_size=args.input_size, 
+        batch_size=args.batch_size, 
+        num_classes=args.num_classes
+    )
 
     if args.num_features == 1:
         train_logs, valid_logs = train_singlefeature(
@@ -530,7 +535,7 @@ def run(args):
         )
 
     elif args.num_features == 2:
-        train_logs, valid_logs = train_doublefeatures(
+        train_logs, valid_logs = train_dualfeatures(
             model=model,
             epochs=args.epochs,
             criterion=criterion,
