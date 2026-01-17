@@ -61,7 +61,7 @@ class MultiFeatureFusionDataset(Dataset):
 
         return img_gasf, img_gadf, img_rp, torch.tensor(label, dtype=torch.long)
 
-class DoubleFeatureFusionDataset(Dataset):
+class DualFeatureFusionDataset(Dataset):
     def __init__(self, root_dir, f1, f2, class_to_idx, transform=None):
         self.root_dir = root_dir
         self.f1 = f1
@@ -147,7 +147,7 @@ class MultiFeatureNPZdataset(Dataset):
 
         return img_gasf, img_gadf, img_rp, torch.tensor(label, dtype=torch.long)
 
-class DoubleFeatureNPZdataset(Dataset):
+class DualFeatureNPZdataset(Dataset):
     def __init__(self, npz_path, transform=None):
         self.transform = transform
         data = np.load(npz_path)

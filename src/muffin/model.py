@@ -156,31 +156,32 @@ class MFCT_Net(nn.Module):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def single_feature_model(input_size):
-    return MultiFeatureFusion(input_size=input_size, num_features=1)
+def single_feature_model(input_size, num_classes):
+    return MultiFeatureFusion(input_size=input_size, num_features=1, num_classes=num_classes)
 
-def double_features_model(input_size):
-    return MultiFeatureFusion(input_size=input_size, num_features=2)
+def dual_features_model(input_size, num_classes):
+    return MultiFeatureFusion(input_size=input_size, num_features=2, num_classes=num_classes)
 
-def multi_features_model(input_size):
-    return MultiFeatureFusion(input_size=input_size, num_features=3)
+def multi_features_model(input_size, num_classes):
+    return MultiFeatureFusion(input_size=input_size, num_features=3, num_classes=num_classes)
 
 def multi_features_mfct_net(input_size):
     return MFCT_Net(input_size=input_size, num_classes=3)
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print('Usage >> python model.py <input_size>')
+    if len(sys.argv) != 3:
+        print('Usage >> python model.py <input_size> <num_classes>')
     else:
         input_size = int(sys.argv[1])
+        num_classes = int(sys.argv[2])
 
         img1 = torch.randn(6, 3, input_size, input_size)
         img2 = torch.randn(6, 3, input_size, input_size)
         img3 = torch.randn(6, 3, input_size, input_size)
 
-        model1 = single_feature_model(input_size=input_size)
-        model2 = double_features_model(input_size=input_size)
-        model3 = multi_features_model(input_size=input_size)
+        model1 = single_feature_model(input_size=input_size, num_classes=num_classes)
+        model2 = dual_features_model(input_size=input_size, num_classes=num_classes)
+        model3 = multi_features_model(input_size=input_size, num_classes=num_classes)
 
         logits = model1(img1)
 
