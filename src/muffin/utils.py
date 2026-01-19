@@ -7,11 +7,7 @@ from muffin.dataset import DualFeatureFusionDataset, MultiFeatureFusionDataset
     
 def serialize_dualfeature(root_dir, output_npz_path, input_feature1, input_feature2, class_to_idx):
     print(f"Search the dataset path: {root_dir}")
-    # class_to_idx = {
-    #     'Downward': 0,
-    #     'Sideway': 1,
-    #     'Upward': 2
-    # }
+    
     dataset_temp = DualFeatureFusionDataset(root_dir, input_feature1, input_feature2, class_to_idx)
     data_list = dataset_temp.data_list
 
@@ -51,11 +47,7 @@ def serialize_dualfeature(root_dir, output_npz_path, input_feature1, input_featu
 
 def serialize_multifeature(root_dir, output_npz_path, class_to_idx):
     print(f"Search the dataset path: {root_dir}")
-    # class_to_idx = {
-    #     'Downward': 0,
-    #     'Sideway': 1,
-    #     'Upward': 2
-    # }
+    
     dataset_temp = MultiFeatureFusionDataset(root_dir, class_to_idx)
     data_list = dataset_temp.data_list
     
