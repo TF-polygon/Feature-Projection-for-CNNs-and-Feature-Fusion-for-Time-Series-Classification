@@ -73,38 +73,44 @@ def visualize_elbow_method(p_e24, p_e48, p_e72, p_e96, p_g24, p_g48, p_g72, p_g9
     # plt.tight_layout()
     plt.show()
 
-def visualize_distribution_of_cluster(npz):
+def visualize_cluster_distribution(npz):
     data = np.load(npz)
     scaled_data = data['scaled_data']
     n_clusters = data['n_clusters']
     labels = data['labels']
     centers = data['centers']
 
-    plt.figure(figsize=(100, 40))
+    width = 10
+    if int(n_clusters) == 3:
+        width = 15
+    elif int(n_clusters) == 4:
+        width = 20
+
+    plt.figure(figsize=(width, 4))
 
     for i in range(n_clusters):
         cluster_indices = np.where(labels == i)[0]
         cluster_data = scaled_data[cluster_indices]
 
-        num_to_sample = max(750, len(cluster_data))
+        num_to_sample = min(15, len(cluster_data))
 
         sample_indices = np.random.choice(
             len(cluster_data),
             size=num_to_sample,
-            replace=False
+            replace=True
         )
 
         sample_data = cluster_data[sample_indices]
 
-        plt.subplot(1, n_clusters, i + 1)
+        plt.subplot(1, int(n_clusters), i + 1)
         
-        plt.plot(np.squeeze(sample_data, -1).T, c='black', alpha=0.015)
-        plt.plot(np.squeeze(centers, -1)[i], c='red', linewidth=20)
+        plt.plot(np.squeeze(sample_data).T, c='dimgray', alpha=0.1, linewidth=5)
+        plt.plot(np.squeeze(centers)[i], c='red', linewidth=2)
 
-        plt.xticks(fontsize=100)
-        plt.yticks(fontsize=100)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=10)
         plt.xlabel('$k$')
-        plt.title(f"Cluster {i}", fontsize=120)
+        plt.title(f"Cluster {i}", fontsize=12)
 
     plt.show()
 
