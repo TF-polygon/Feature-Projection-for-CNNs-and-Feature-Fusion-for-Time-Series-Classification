@@ -2,28 +2,34 @@ from tsmoothie.smoother import *
 from tslearn.clustering import TimeSeriesKMeans
 from tslearn.preprocessing import TimeSeriesScalerMinMax
 from rich.console import Console
+from datetime import datetime
 
 import os
 
+import joblib
 import argparse
 import numpy as np
 import pandas as pd
 
 console = Console()
 
-def export(kmeans, scaled_data, file_name):
+def export(kmeans, scaled_data, file_name, model_name):
     save_path = 'test_data/clustering'
     os.makedirs(save_path, exist_ok=True)
+    os.makedirs(os.path.join(save_path, 'model'), exist_ok=True)
 
-    final_file_name = os.path.join(save_path, file_name)
+    npz_file_name = os.path.join(save_path, file_name)
+    model_file_name = os.path.join(os.path.join(save_path, 'model'), model_name)
 
     np.savez(
-        final_file_name,
+        npz_file_name,
         scaled_data=scaled_data,
         labels=kmeans.labels_,
         centers=kmeans.cluster_centers_,
         n_clusters=kmeans.n_clusters
     )
+
+    joblib.dump(kmeans, model_file_name)
 
 def clustering(scaled_data, n_clusters, symbol='EURUSD', max_iter=20, random_state=123, n_init=3):
     console.log(f'Start to do clustering {symbol}...')
@@ -39,8 +45,6 @@ def clustering(scaled_data, n_clusters, symbol='EURUSD', max_iter=20, random_sta
     
     console.log(f'Clustering {symbol} has finished.')
 
-    # start_index_in_original_data = len(data) - len(kmeans.labels_)
-    # dates_for_time = data['Date'][start_index_in_original_data : len(data)]
     reshaped_data = scaled_data.reshape(scaled_data.shape[0], scaled_data.shape[1])
     time_column_names = [f'Time_{i:02d}' for i in range(1, reshaped_data.shape[1] + 1)]
     clustered_data = pd.DataFrame(reshaped_data, columns=time_column_names)
@@ -49,7 +53,7 @@ def clustering(scaled_data, n_clusters, symbol='EURUSD', max_iter=20, random_sta
     path = 'data/processed'
     clustered_data.to_csv(os.path.join(path, filename), index=False)
 
-    export(kmeans, reshaped_data, f'{symbol}.npz')
+    export(kmeans, reshaped_data, f'{symbol}_{n_clusters}k.npz', f'{symbol}_{n_clusters}k.joblib')
 
     console.log(f'Successfully saved the clustered data in {filename}.\n\n')
 
