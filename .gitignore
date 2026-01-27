@@ -216,4 +216,10 @@ prev/
 temp/
 weights/
 *.npz
+
 # Experimental materials
+data/processed
+clustering_data/
+datasets/joblib/
+datasets/P-FXImageSet
+test_data/
