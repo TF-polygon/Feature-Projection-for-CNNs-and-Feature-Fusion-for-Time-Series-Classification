@@ -1,4 +1,4 @@
-from muffin.model import single_feature_model, dual_features_model, multi_features_model
+from muffin.model import muffincnn_singlefeature, muffincnn_dualfusion, muffincnn_triplefusion
 from muffin.dataset import MultiFeatureFusionDataset, DualFeatureFusionDataset, MultiFeatureNPZdataset, DualFeatureNPZdataset
 
 from datetime import datetime
@@ -16,33 +16,48 @@ import os
 
 def get_model(num_features, num_classes, input_size):
     if num_features == 1:
-        return single_feature_model(input_size, num_classes)
+        return muffincnn_singlefeature(input_size, num_classes)
     elif num_features == 2:
-        return dual_features_model(input_size, num_classes)
+        return muffincnn_dualfusion(input_size, num_classes)
     elif num_features == 3:
-        return multi_features_model(input_size, num_classes) # multi_features_mfct_net(input_size)
+        return muffincnn_triplefusion(input_size, num_classes)
     
-def export(model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
+def export(args, model, train_logs, valid_logs, test_results=None, test_labels=None, test_preds=None):
     train_data_path = 'data/results/final_data'
     weight_path = 'weights'
     os.makedirs(train_data_path, exist_ok=True)
     os.makedirs(weight_path, exist_ok=True)
+
     weight_name = datetime.now().strftime("%m-%d_%H-%M")
     torch.save(model.state_dict(), os.path.join(weight_path, weight_name + ".pt"))
+
+    k = args.num_classes
+    f = args.num_features
+    symbol = args.dataset[-6:]
+
+    if f == 1:
+        image_map = args.dataset[32:34] if len(args.dataset) == 34 else args.dataset[32:36]
+        symbol = f'{args.dataset[25:31]}_{image_map}'
+    if f == 2:
+        symbol = f'{args.dataset[25:31]}_gasf_rp'
+
     log_df = pd.DataFrame(train_logs)
     log_valdf = pd.DataFrame(valid_logs)
 
-    log_df.to_csv(os.path.join(train_data_path, weight_name + "_train.csv"), index=False)
-    log_valdf.to_csv(os.path.join(train_data_path, weight_name + "_valid.csv"), index=False)    
+    experimental_case = f'{k}k_{f}f_{symbol}'
+    final_path = os.path.join(train_data_path, experimental_case)
+
+    log_df.to_csv(final_path + "_train.csv", index=False)
+    log_valdf.to_csv(final_path + "_valid.csv", index=False)    
 
     if test_results:
         log_testdf = pd.DataFrame(test_results)
-        log_testdf.to_csv(os.path.join(train_data_path, weight_name + "_test.csv"), index=False)
-        print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv, {weight_name}_test.csv]")     
+        log_testdf.to_csv(final_path + "_test.csv", index=False)
+        print(f"Successfully save training results! filename: [{final_path}_train.csv, {final_path}_valid.csv, {final_path}_test.csv]")     
         
         test_data_path = 'data/results/test_data'
         os.makedirs(test_data_path, exist_ok=True)
-        npz_file_path = os.path.join(test_data_path, weight_name)
+        npz_file_path = os.path.join(test_data_path, experimental_case)
 
         test_labels_np = np.array(test_labels)
         test_preds_np = np.array(test_preds)
@@ -53,7 +68,7 @@ def export(model, train_logs, valid_logs, test_results=None, test_labels=None, t
             preds=test_preds_np,
         )
     
-    print(f"Successfully save training results! filename: [{weight_name}_train.csv, {weight_name}_valid.csv]") 
+    print(f"Successfully save training results! filename: [{final_path}_train.csv, {final_path}_valid.csv]") 
 
 def dataloader(num_features, input_size, batch_size, path, num_classes=2):
     transform = transforms.Compose([
@@ -75,8 +90,8 @@ def dataloader(num_features, input_size, batch_size, path, num_classes=2):
         dataset = DualFeatureFusionDataset(
             root_dir=path, 
             class_to_idx=class_to_idx,
-            f1='gasf',
-            f2='gadf', 
+            f1='gadf',
+            f2='rp',
             transform=transform
         ) # DualFeatureNPZdataset(path, transform)
     else:
@@ -489,7 +504,7 @@ def test_model(model, num_features, test_loader, criterion, device):
             "Test Recall": test_rec
         })
 
-    else:
+    elif num_features == 3:
         test_labels, test_preds, test_loss, test_acc, test_prec, test_rec = test_multifeatures(
             model=model, 
             test_loader=test_progress_bar, 
@@ -563,6 +578,7 @@ def run(args):
     )
 
     export(
+        args=args,
         model=model,
         train_logs=train_logs,
         valid_logs=valid_logs,

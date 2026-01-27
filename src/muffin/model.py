@@ -30,9 +30,9 @@ class Conv(nn.Module):
         x = self.conv_features(x)
         return x
     
-class MultiFeatureFusion(nn.Module):
+class MuffinCNN(nn.Module):
     def __init__(self, input_size, embed_dim=128, hidden_dim=256, num_features=1, num_classes=3):
-        super(MultiFeatureFusion, self).__init__()
+        super(MuffinCNN, self).__init__()
 
         self.embed_dim = embed_dim
         dim_per_cnn = embed_dim // num_features
@@ -103,70 +103,22 @@ class MultiFeatureFusion(nn.Module):
 
         x = torch.cat(f_list, dim=1)
         x = self.fusion_block(x)
-        # x = x.flatten(start_dim=1)
         x = self.agap(x)
         x = x.view(x.size(0), -1) 
 
         return self.classifier(x)
-
-class MFCT_Net(nn.Module):
-    def __init__(self, input_size, embed_dim=384, hidden_dim=512, num_heads=8, num_layers=3, num_classes=2):
-        super(MFCT_Net, self).__init__()
-
-        self.embed_dim = embed_dim
-        channel_per_cnn = embed_dim // 3
-
-        self.cnn_gasf = Conv(input_size=input_size, out_channels=channel_per_cnn)
-        self.cnn_gadf = Conv(input_size=input_size, out_channels=channel_per_cnn)
-        self.cnn_rp = Conv(input_size=input_size, out_channels=channel_per_cnn)
-
-        self.feature_h = self.cnn_gasf.output_H
-        self.feature_w = self.cnn_gasf.output_W
-        self.seq_len = self.feature_h * self.feature_w
-
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=embed_dim, nhead=num_heads, dim_feedforward=embed_dim * 4, dropout=0.1, batch_first=True
-        )
-        self.transformer_encoder = nn.TransformerEncoder(
-            encoder_layer=encoder_layer,
-            num_layers=num_layers
-        )
-
-        self.positional_embedding = nn.Parameter(torch.randn(1, self.seq_len, embed_dim))
-
-        self.fc_head = nn.Linear(embed_dim, num_classes)
-
-    def forward(self, gasf, gadf, rp):
-        f_gasf = self.cnn_gasf(gasf)
-        f_gadf = self.cnn_gadf(gadf)
-        f_rp = self.cnn_rp(rp)
-
-        # Prepare to input into Transformer
-        x = torch.cat([f_gasf, f_gadf, f_rp], dim=1)
-        x = x.flatten(start_dim=2)
-        x = x.transpose(1, 2)
-        x = x + self.positional_embedding
-
-        x = self.transformer_encoder(x)
-
-        x = x.mean(dim=1)
-        x = self.fc_head(x)
-        return x
-
+    
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def single_feature_model(input_size, num_classes):
-    return MultiFeatureFusion(input_size=input_size, num_features=1, num_classes=num_classes)
+def muffincnn_singlefeature(input_size, num_classes):
+    return MuffinCNN(input_size=input_size, num_features=1, num_classes=num_classes)
 
-def dual_features_model(input_size, num_classes):
-    return MultiFeatureFusion(input_size=input_size, num_features=2, num_classes=num_classes)
+def muffincnn_dualfusion(input_size, num_classes):
+    return MuffinCNN(input_size=input_size, num_features=2, num_classes=num_classes)
 
-def multi_features_model(input_size, num_classes):
-    return MultiFeatureFusion(input_size=input_size, num_features=3, num_classes=num_classes)
-
-def multi_features_mfct_net(input_size):
-    return MFCT_Net(input_size=input_size, num_classes=3)
+def muffincnn_triplefusion(input_size, num_classes):
+    return MuffinCNN(input_size=input_size, num_features=3, num_classes=num_classes)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -179,9 +131,9 @@ if __name__ == '__main__':
         img2 = torch.randn(6, 3, input_size, input_size)
         img3 = torch.randn(6, 3, input_size, input_size)
 
-        model1 = single_feature_model(input_size=input_size, num_classes=num_classes)
-        model2 = dual_features_model(input_size=input_size, num_classes=num_classes)
-        model3 = multi_features_model(input_size=input_size, num_classes=num_classes)
+        model1 = muffincnn_singlefeature(input_size=input_size, num_classes=num_classes)
+        model2 = muffincnn_dualfusion(input_size=input_size, num_classes=num_classes)
+        model3 = muffincnn_triplefusion(input_size=input_size, num_classes=num_classes)
 
         logits = model1(img1)
 
