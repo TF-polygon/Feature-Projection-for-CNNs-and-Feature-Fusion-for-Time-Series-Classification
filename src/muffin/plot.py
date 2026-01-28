@@ -1,4 +1,6 @@
 from sklearn.metrics import confusion_matrix
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -112,6 +114,79 @@ def visualize_cluster_distribution(npz):
         plt.xlabel('$k$')
         plt.title(f"Cluster {i}", fontsize=12)
 
+    plt.show()
+
+def visualize_tSNE(npz):
+    data = np.load(npz)
+    scaled_data = data['scaled_data']
+    cluster_labels = data['labels']
+    n_series = scaled_data.shape[0]
+    X_tsne_input = scaled_data.reshape(n_series, -1)
+
+    tsne = TSNE(n_components=2, perplexity=30, random_state=123)
+    X_tsne = tsne.fit_transform(X_tsne_input)
+
+    tsne_df = pd.DataFrame(X_tsne, columns=['TSNE Component 1', 'TSNE Component 2'])
+    tsne_df['Cluster'] = cluster_labels
+    tsne_df['Cluster'] = tsne_df['Cluster'].astype('category')
+
+    plt.figure(figsize=(17, 12))
+    sns.scatterplot(
+        x='TSNE Component 1',
+        y='TSNE Component 2',
+        hue='Cluster',
+        palette='binary',
+        data=tsne_df,
+        legend=False,
+        alpha=0.5,
+        s=450
+    )
+    # plt.title('t-SNE Visualization of Time Series Clusters')
+    plt.xlabel('TSNE Component 1', fontsize=22)
+    plt.xticks(fontsize=18)
+    plt.ylabel('TSNE Component 2', fontsize=22)
+    plt.yticks(fontsize=18)
+    plt.grid(False)
+    # plt.legend(fontsize=25)
+    plt.show()    
+
+def visualize_pca(npz):
+    data = np.load(npz)
+    scaled_data = data['scaled_data']
+    cluster_labels = data['labels']
+    
+    n_series = scaled_data.shape[0]
+    X_pca_input = scaled_data.reshape(n_series, -1)
+
+    pca = PCA(n_components=2, random_state=123)
+    X_pca = pca.fit_transform(X_pca_input)
+
+    pca_df = pd.DataFrame(X_pca, columns=['PCA Component 1', 'PCA Component 2'])
+    pca_df['Cluster'] = cluster_labels
+    pca_df['Cluster'] = pca_df['Cluster'].astype('category')
+
+    plt.figure(figsize=(17, 12))
+    sns.scatterplot(
+        x='PCA Component 1',
+        y='PCA Component 2',
+        hue='Cluster',
+        palette='hls',
+        data=pca_df,
+        legend=True,
+        alpha=0.6,
+        s=450,
+        edgecolor='w',
+        linewidth=0.5
+    )
+
+    var_exp = pca.explained_variance_ratio_ * 100
+    plt.xlabel(f'PCA Component 1 ({var_exp[0]:.2f}%)', fontsize=22)
+    plt.ylabel(f'PCA Component 2 ({var_exp[1]:.2f}%)', fontsize=22)
+    
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    plt.grid(True, linestyle='--', alpha=0.3)
+    
     plt.show()
 
 def visualize_confusion_matrix(labels_path, preds_path):
