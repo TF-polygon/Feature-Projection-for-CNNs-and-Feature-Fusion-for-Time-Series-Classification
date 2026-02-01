@@ -78,7 +78,7 @@ def visualize_elbow_method(p_e24, p_e48, p_e72, p_e96, p_g24, p_g48, p_g72, p_g9
 def visualize_cluster_distribution(npz):
     data = np.load(npz)
     scaled_data = data['scaled_data']
-    n_clusters = data['n_clusters']
+    n_clusters = int(data['n_clusters'])
     labels = data['labels']
     centers = data['centers']
 
@@ -93,29 +93,27 @@ def visualize_cluster_distribution(npz):
     for i in range(n_clusters):
         cluster_indices = np.where(labels == i)[0]
         cluster_data = scaled_data[cluster_indices]
+        cluster_center = centers[i].flatten() 
+
+        distances = np.linalg.norm(cluster_data - cluster_center, axis=1)
 
         num_to_sample = min(15, len(cluster_data))
+        closest_indices = np.argsort(distances)[:num_to_sample]
+        sample_data = cluster_data[closest_indices]
 
-        sample_indices = np.random.choice(
-            len(cluster_data),
-            size=num_to_sample,
-            replace=True
-        )
+        plt.subplot(1, n_clusters, i + 1)
 
-        sample_data = cluster_data[sample_indices]
-
-        plt.subplot(1, int(n_clusters), i + 1)
-        
-        plt.plot(np.squeeze(sample_data).T, c='dimgray', alpha=0.1, linewidth=5)
-        plt.plot(np.squeeze(centers)[i], c='red', linewidth=2)
-
+        if sample_data.size > 0:
+            plt.plot(sample_data.T, c='dimgray', alpha=0.3, linewidth=4)        
+            plt.plot(cluster_center.T, c='red', linewidth=2, label='Center')
+            
         plt.xticks(fontsize=10)
         plt.yticks(fontsize=10)
-        plt.xlabel('$k$')
+        plt.xlabel('Time Step')
         plt.title(f"Cluster {i}", fontsize=12)
 
     plt.show()
-
+    
 def visualize_tSNE(npz):
     data = np.load(npz)
     scaled_data = data['scaled_data']
