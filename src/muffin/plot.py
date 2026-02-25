@@ -1,6 +1,6 @@
-from sklearn.metrics import confusion_matrix
-from sklearn.manifold import TSNE
+from sklearn.metrics import confusion_matrix, precision_recall_curve, auc
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -187,14 +187,16 @@ def visualize_pca(npz):
     
     plt.show()
 
-def visualize_confusion_matrix(labels_path, preds_path):
-    y_true = np.load(labels_path)
-    y_prob = np.load(preds_path)
+def visualize_confusion_matrix(npz):
+    npz_load = np.load(npz)
+    y_label = npz_load['labels']
+    y_pred = npz_load['preds']
 
-    conf_matrix = confusion_matrix(y_true, y_prob)
+    conf_matrix = confusion_matrix(y_label, y_pred)
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+    #sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', annot_kws={'size': 20, 'weight': 'bold'})
     plt.xlabel('Predicted Label', fontsize=15)
     plt.ylabel('True Label', fontsize=15)
 
@@ -224,6 +226,20 @@ def visualize_learning_curve(train_path, valid_path):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend(loc='best')
+
+def visualize_pr_curve(npz):
+    npz_load = np.load(npz)
+    labels, preds = npz_load['labels'], npz_load['preds']
+
+    precision, recall, _ = precision_recall_curve(labels, preds)
+    pr_auc = auc(recall, precision)
+
+    plt.plot(
+        recall,
+        precision,
+        lw=2,
+        label=f'EUR/USD (AP = {pr_auc:.3f})'
+    )
 
 if __name__ == '__main__':
     pass
