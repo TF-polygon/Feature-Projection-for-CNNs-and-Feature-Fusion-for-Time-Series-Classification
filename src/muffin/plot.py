@@ -196,7 +196,7 @@ def visualize_confusion_matrix(npz):
 
     plt.figure(figsize=(10, 8))
     #sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', annot_kws={'size': 20, 'weight': 'bold'})
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', annot_kws={'size': 12})
     plt.xlabel('Predicted Label', fontsize=15)
     plt.ylabel('True Label', fontsize=15)
 
