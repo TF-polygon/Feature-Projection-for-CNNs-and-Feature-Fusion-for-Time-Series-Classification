@@ -13,22 +13,14 @@ def get_image_filter(type, x):
         return GramianAngularField(method='difference', image_size=x.shape[1])
     elif type == 'RP':
         return RecurrencePlot(threshold=None)
-
-def get_label_map(num_classes):
-    if num_classes == 2:
-        return {0: 'class0', 1: 'class1'}
-    elif num_classes == 3:
-        return {0: 'class0', 1: 'class1', 2: 'class2'}
-    elif num_classes == 4:
-        return {0: 'class0', 1: 'class1', 2: 'class2', 3: 'class3'}
-
+    
 def run(args):
     df = pd.read_csv(args.path)
     X = df.drop('Cluster_Label', axis=1).values
     y = df['Cluster_Label'].values
 
     image_filter = get_image_filter(type=args.image_type, x=X)
-    label_map = get_label_map(args.num_classes)
+    label_map = {f'class{i}': i for i in range(args.num_classes)}
 
     dir = f'datasets/P-FXImageSet/{args.num_classes}k/{args.data_type}/{args.symbol}/{args.image_type}'
     for label_name in label_map.values():
