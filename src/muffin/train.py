@@ -39,7 +39,7 @@ def export(args, model, train_logs, valid_logs, test_results=None, test_labels=N
         image_map = args.dataset[32:34] if len(args.dataset) == 34 else args.dataset[32:36]
         symbol = f'{args.dataset[25:31]}_{image_map}'
     if f == 2:
-        symbol = f'{args.dataset[25:31]}_gasf_rp'
+        symbol = f'{args.dataset[25:31]}_gadf_rp'
 
     log_df = pd.DataFrame(train_logs)
     log_valdf = pd.DataFrame(valid_logs)
@@ -55,22 +55,70 @@ def export(args, model, train_logs, valid_logs, test_results=None, test_labels=N
         log_testdf.to_csv(final_path + "_test.csv", index=False)
         print(f"Successfully save training results! filename: [{final_path}_train.csv, {final_path}_valid.csv, {final_path}_test.csv]")     
         
-        test_data_path = 'data/results/test_data'
+        test_data_path = 'data/results/test_npz'
         os.makedirs(test_data_path, exist_ok=True)
         npz_file_path = os.path.join(test_data_path, experimental_case)
 
         test_labels_np = np.array(test_labels)
         test_preds_np = np.array(test_preds)
 
-        return np.savez_compressed(
+        np.savez_compressed(
             npz_file_path,
             labels=test_labels_np,
             preds=test_preds_np,
         )
+        
+        return
     
     print(f"Successfully save training results! filename: [{final_path}_train.csv, {final_path}_valid.csv]") 
 
-def dataloader(num_features, input_size, batch_size, path, num_classes=2):
+def dataloader(num_features, input_size, batch_size, path, f1=None, f2=None, num_classes=2):
+    train_transform = transforms.Compose([
+        transforms.Resize((input_size, input_size)),
+        transforms.ToTensor(),
+        transforms.RandomErasing(),
+    ])
+
+    eval_transform = transforms.Compose([
+        transforms.Resize((input_size, input_size)),
+        transforms.ToTensor()
+    ])
+    
+    class_to_idx = {f'class{i}': i for i in range(num_classes)}
+    # --path datasets/P-FXImageSet/2k/EURUSD
+    train_path = os.path.join(path, 'train')
+    valid_path = os.path.join(path, 'valid')
+    test_path = os.path.join(path, 'test')
+
+    def create_dataset(root, transform):
+        if num_features == 1:
+            return datasets.ImageFolder(root=os.path.join(root, f1.upper()), transform=transform)
+        elif num_features == 2:
+            return DualFeatureFusionDataset(
+                root_dir=root, 
+                class_to_idx=class_to_idx,                         
+                f1=f1, 
+                f2=f2, 
+                transform=transform
+            )
+        else:
+            return MultiFeatureFusionDataset(
+                root_dir=root, 
+                class_to_idx=class_to_idx, 
+                transform=transform
+            )
+
+    train_dataset = create_dataset(train_path, train_transform)
+    valid_dataset = create_dataset(valid_path, eval_transform)
+    test_dataset = create_dataset(test_path, eval_transform)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, test_loader
+
+def dataloader_prev(num_features, input_size, batch_size, path, num_classes=2):
     transform = transforms.Compose([
         transforms.Resize((input_size, input_size)),
         transforms.ToTensor(),
@@ -93,13 +141,15 @@ def dataloader(num_features, input_size, batch_size, path, num_classes=2):
             f1='gadf',
             f2='rp',
             transform=transform
-        ) # DualFeatureNPZdataset(path, transform)
+        )
+        # dataset = DualFeatureNPZdataset(path, transform)
     else:
         dataset = MultiFeatureFusionDataset(
             root_dir=path,
             class_to_idx=class_to_idx,
             transform=transform
-        ) # MultiFeatureNPZdataset(path, transform)
+        ) 
+        # dataset = MultiFeatureNPZdataset(path, transform)
 
     total_size = len(dataset)
     train_size = int(total_size * 0.7)
@@ -536,7 +586,9 @@ def run(args):
         num_features=args.num_features, 
         input_size=args.input_size, 
         batch_size=args.batch_size, 
-        num_classes=args.num_classes
+        num_classes=args.num_classes,
+        f1=args.f1,
+        f2=args.f2
     )
 
     if args.num_features == 1:
