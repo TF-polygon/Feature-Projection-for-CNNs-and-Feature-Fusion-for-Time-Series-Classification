@@ -30,9 +30,9 @@ def run(args):
     image_filter = get_image_filter(type=args.image_type, x=X)
     label_map = get_label_map(args.num_classes)
 
-    dir = f'datasets/Clu/{args.num_classes}cls/{args.image_type}'
+    dir = f'datasets/P-FXImageSet/{args.num_classes}k/{args.data_type}/{args.symbol}/{args.image_type}'
     for label_name in label_map.values():
-        os.makedirs(os.path.join(dir, label_name))
+        os.makedirs(os.path.join(dir, label_name), exist_ok=True)
 
     for i, (series, label) in enumerate(tqdm(zip(X, y), total=len(X), desc=f"Running on image conversion ({args.image_type}): "), start=1):
         image = image_filter.fit_transform(series.reshape(1, -1))[0]
@@ -45,6 +45,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--path', type=str, required=True, help='path to dataset')
     parser.add_argument('--image_type', type=str, required=True, help='conversion type (ex: GASF, GADF, RP)')
+    parser.add_argument('--data_type', type=str, required=True, help='purpose of data (ex: train, valid, test)')
     parser.add_argument('--num_classes', type=int, default=2, help='number of classes')
     parser.add_argument('--symbol', type=str, default='EURUSD', help='symbol (currency pair)')
 
