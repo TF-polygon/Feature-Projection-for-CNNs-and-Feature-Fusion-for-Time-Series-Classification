@@ -14,7 +14,7 @@ import pandas as pd
 console = Console()
 
 def export(kmeans, scaled_data, file_name, model_name):
-    save_path = 'test_data/clustering'
+    save_path = 'clustering_data'
     os.makedirs(save_path, exist_ok=True)
     os.makedirs(os.path.join(save_path, 'model'), exist_ok=True)
 
