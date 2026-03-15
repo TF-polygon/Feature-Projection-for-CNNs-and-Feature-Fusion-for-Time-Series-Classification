@@ -241,5 +241,39 @@ def visualize_pr_curve(npz):
         label=f'EUR/USD (AP = {pr_auc:.3f})'
     )
 
+def visualize_dataset_division(train_df, valid_df, test_df):
+    step = 48
+
+    s1 = train_df['Close'].iloc[::step]
+    s2 = valid_df['Close'].iloc[::step]
+    s3 = test_df['Close'].iloc[::step]
+    
+    plt.figure(figsize=(10, 3))
+    
+    current_idx = 0
+
+    x1 = range(current_idx, current_idx + len(s1))
+    plt.plot(x1, s1.values, color='dodgerblue', label='Train', linewidth=1.5)
+    current_idx += len(s1)
+
+    x2 = range(current_idx, current_idx + len(s2))
+    plt.plot(x2, s2.values, color='orange', label='Validation', linewidth=1.5)
+    current_idx += len(s2)
+
+    x3 = range(current_idx, current_idx + len(s3))
+    plt.plot(x3, s3.values, color='forestgreen', label='Test', linewidth=1.5)
+
+
+    split_1_2 = len(train_df) // step
+    split_2_3 = (len(train_df) + len(valid_df)) // step
+
+    plt.axvline(x=split_1_2, linestyle='--', alpha=0.6)
+    plt.axvline(x=split_2_3, linestyle='--', alpha=0.6)
+    plt.xticks([])
+    plt.ylabel('Close Price')
+    plt.legend(loc='best')
+    plt.grid(True, alpha=0.2)
+
+
 if __name__ == '__main__':
     pass
