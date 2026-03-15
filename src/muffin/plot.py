@@ -247,31 +247,38 @@ def visualize_dataset_division(train_df, valid_df, test_df):
     s1 = train_df['Close'].iloc[::step]
     s2 = valid_df['Close'].iloc[::step]
     s3 = test_df['Close'].iloc[::step]
+
+    
+    all_values = pd.concat([s1, s2, s3])
+    y_min = all_values.min()
+    y_max = all_values.max()
     
     plt.figure(figsize=(10, 3))
-    
+
     current_idx = 0
 
     x1 = range(current_idx, current_idx + len(s1))
-    plt.plot(x1, s1.values, color='dodgerblue', label='Train', linewidth=1.5)
+    plt.plot(x1, s1.values, color='b', label='Train', linewidth=1)
     current_idx += len(s1)
 
     x2 = range(current_idx, current_idx + len(s2))
-    plt.plot(x2, s2.values, color='orange', label='Validation', linewidth=1.5)
+    plt.plot(x2, s2.values, color='orange', label='Validation', linewidth=1.25)
     current_idx += len(s2)
 
     x3 = range(current_idx, current_idx + len(s3))
-    plt.plot(x3, s3.values, color='forestgreen', label='Test', linewidth=1.5)
-
+    plt.plot(x3, s3.values, color='forestgreen', label='Test', linewidth=1.25)
+    current_idx += len(s3)
 
     split_1_2 = len(train_df) // step
     split_2_3 = (len(train_df) + len(valid_df)) // step
 
-    plt.axvline(x=split_1_2, linestyle='--', alpha=0.6)
-    plt.axvline(x=split_2_3, linestyle='--', alpha=0.6)
+    plt.axvline(x=split_1_2, color='black', linestyle='--', linewidth=1.5, alpha=0.6)
+    plt.axvline(x=split_2_3, color='black', linestyle='--', linewidth=1.5, alpha=0.6)
+    plt.xlim(0, current_idx - 1)
     plt.xticks([])
-    plt.ylabel('Close Price')
-    plt.legend(loc='best')
+    plt.yticks([y_min, y_max], [f'{y_min:.3f}', f'{y_max:.3f}'], fontsize=11)
+    # plt.ylabel('Close Price')
+    plt.legend(loc='best', fontsize=11)
     plt.grid(True, alpha=0.2)
 
 
