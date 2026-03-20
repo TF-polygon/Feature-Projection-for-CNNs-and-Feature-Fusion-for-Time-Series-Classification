@@ -159,7 +159,7 @@ def run_epoch(model, data_loader, criterion, optimizer, total_epochs, current_ep
                 'Loss': f"{loss.item():.4f}", 
                 'Acc': f"{acc:.4f}",
                 'Prec': f"{prec:.4f}",
-                'Rec': f"{rec:.4f},"
+                'Rec': f"{rec:.4f}"
             })
 
         avg_loss = running_loss / len(data_loader)
@@ -253,7 +253,7 @@ def run(args):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
-    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
     
     train_loader, valid_loader, test_loader = dataloader(
         path=args.dataset,
