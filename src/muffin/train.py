@@ -1,9 +1,8 @@
-from muffin.model import muffincnn_singlefeature, muffincnn_dualfusion, muffincnn_triplefusion
-from muffin.dataset import MultiFeatureFusionDataset, DualFeatureFusionDataset, MultiFeatureNPZdataset, DualFeatureNPZdataset
+from muffin.model import residualmuffincnn, muffincnn_singlefeature, muffincnn_dualfusion, muffincnn_triplefusion
+from muffin.dataset import MultiFeatureFusionDataset, DualFeatureFusionDataset
 
-from datetime import datetime
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
@@ -78,7 +77,8 @@ def dataloader(num_features, input_size, batch_size, path, f1=None, f2=None, num
     train_transform = transforms.Compose([
         transforms.Resize((input_size, input_size)),
         transforms.ToTensor(),
-        transforms.RandomErasing(),
+        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.5)),
+        transforms.RandomErasing(p=0.2, scale=(0.02, 0.1)),
     ])
 
     eval_transform = transforms.Compose([
@@ -181,7 +181,7 @@ def run_epoch(model, data_loader, criterion, optimizer, total_epochs, current_ep
 
     return metrics
 
-def train(model, epochs, criterion, optimizer, train_loader, valid_loader, device=torch.device("cuda")):
+def train(model, epochs, criterion, optimizer, train_loader, valid_loader, scheduler=None, device=torch.device("cuda")):
     train_logs, valid_logs = [], []
     
     for epoch in range(epochs):
@@ -205,6 +205,10 @@ def train(model, epochs, criterion, optimizer, train_loader, valid_loader, devic
             device=device,
             is_training=False
         )
+
+        if scheduler is not None:
+            scheduler.step()
+
         train_logs.append(t_m)
         valid_logs.append(v_m)
     
@@ -247,13 +251,19 @@ def test(model, test_loader, criterion, device):
     return test_labels, test_preds, test_results
 
 def run(args):
-    model = get_model(args.num_features, args.num_classes, args.input_size)
+    model = residualmuffincnn(
+        input_size=args.input_size,
+        num_features=args.num_features,
+        num_classes=args.num_classes
+    ) 
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
+    # scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, min_lr=1e-6)
+    scheduler = CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)
     
     train_loader, valid_loader, test_loader = dataloader(
         path=args.dataset,
@@ -270,6 +280,7 @@ def run(args):
         epochs=args.epochs,
         criterion=criterion,
         optimizer=optimizer,
+        scheduler=scheduler,
         train_loader=train_loader,
         valid_loader=valid_loader,
         device=device
