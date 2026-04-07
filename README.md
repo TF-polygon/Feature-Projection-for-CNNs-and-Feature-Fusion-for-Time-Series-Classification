@@ -24,61 +24,10 @@ Financial time series data — such as Forex price sequences — does not come w
 ---
 
 ## Research Pipeline
-
-```
-Raw Forex OHLCV Data (1H)
-        │
-        ▼
- ┌─────────────────────────────────────────┐
- │  Step 1. Optimal Clustering Condition   │
- │  elbow_method.py                        │
- │  - Window shapes: {24, 48, 72, 96}      │
- │  - k range: 2 ≤ k ≤ 15                 │
- │  - Metrics: WCSS, Silhouette, DBI, CHI  │
- └──────────────────┬──────────────────────┘
-                    │
-                    ▼
- ┌─────────────────────────────────────────┐
- │  Step 2. DTW-based K-Means Clustering   │
- │  clustering.py                          │
- │  - Lowess smoothing (pre-processing)    │
- │  - Min-Max normalization per window     │
- │  - TimeSeriesKMeans (metric="dtw")      │
- │  - Saves model (.joblib) + data (.npz)  │
- └──────────────────┬──────────────────────┘
-                    │
-                    ▼
- ┌─────────────────────────────────────────┐
- │  Step 3. Pseudo-Label Mapping           │
- │  mapping.py / auto_mapping.py           │
- │  - Apply trained model to val/test data │
- │  - Outputs: clustered_<SYMBOL>_<k>cls_  │
- │    {train,valid,test}.csv               │
- └──────────────────┬──────────────────────┘
-                    │
-                    ▼
- ┌─────────────────────────────────────────┐
- │  Step 4. Time Series → Image Conversion │
- │  image_converter.py / auto_image_       │
- │  converter.py                           │
- │  - GASF  (Gramian Angular Summation     │
- │           Field)                        │
- │  - GADF  (Gramian Angular Difference    │
- │           Field)                        │
- │  - RP    (Recurrence Plot)              │
- │  - Image size: w × w  (w = window_shape)│
- │  - Saved to datasets/P-FXImageSet/      │
- └──────────────────┬──────────────────────┘
-                    │
-                    ▼
- ┌─────────────────────────────────────────┐
- │  Step 5. Multi-Feature Fusion CNN       │
- │  main.py  →  src/muffin/               │
- │  - 3-branch CNN (GASF / GADF / RP)     │
- │  - Feature fusion layer                │
- │  - Classification head (k classes)     │
- └─────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2be1e245-e809-46b6-8ce3-0cabfeaed3e9"><br>
+  <b>Figure 1.</b> Overview of the proposed framework.
+</p>
 
 ---
 
@@ -241,6 +190,11 @@ Each 1D time series window of length `w` is encoded into a `w × w` 2D image usi
 | **GASF** | Gramian Angular Summation Field — encodes temporal correlations via angular cosine sum |
 | **GADF** | Gramian Angular Difference Field — captures directional temporal differences |
 | **RP** | Recurrence Plot — visualizes the recurrence of states in phase space |
+
+<p align="center">
+  <img width="1647" height="1347" alt="image conversion" src="https://github.com/user-attachments/assets/e6ba404d-cc67-4528-bdad-38a2bea8eaa2"><br>
+  <b>Figure 2.</b> Visualization of the three image conversion scheme used. Each row demonstrates how temporal features are mapped into a standardized 2D space (normalized between -1.0 and 1.0).
+</p>
 
 These three representations capture complementary aspects of the same time series segment, motivating their fusion.
 
